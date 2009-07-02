@@ -1,6 +1,6 @@
 " Script Name: mark.vim
-" Version:     2.0.0 (global version)
-" Last Change: June 1, 2009
+" Version:     2.1.0 (global version)
+" Last Change: June 6, 2009
 "
 " Copyright:   (C) 2005-2008 by Yuheng Xie
 "              (C) 2008-2009 by Ingo Karkat
@@ -11,11 +11,10 @@
 " Contributors:Luc Hermitte, Ingo Karkat
 "
 " Dependencies:
-"  - Vim 7.0 or higher. 
+"  - Vim 7.1 with "matchadd()", or Vim 7.2 or higher. 
 "  - SearchSpecial.vim autoload script (optional, for improved search messages). 
 "
-" Description: a little script to highlight several words in different colors
-"              simultaneously
+" Description: Highlight several words in different colors simultaneously. 
 "
 " Usage:       :Mark regexp   to mark a regular expression
 "              :Mark regexp   with exactly the same regexp to unmark it
@@ -37,7 +36,7 @@
 "                       \?  jump to the previous occurrence of ANY mark
 "                        *  behaviors vary, please refer to the table on
 "                        #  line 123
-"                combined with VIM's / and ? etc.
+"                combined with Vim's / and ? etc.
 "
 "              The default colors/groups setting is for marking six
 "              different words in different colors. You may define your own
@@ -45,13 +44,28 @@
 "              names as "MarkWordN", where N is a number. An example could be
 "              found below.
 "
-" Bugs:        some colored words could not be highlighted
+" Bugs:
 "
 " TODO:
-"  -) With Vim 7.2, you could use matchadd() / matchdelete() instead of the
-"     ':syntax match' commands. 
 " 
 " Changes:
+" 6th Jun 2009, Ingo Karkat
+"  1. Somehow s:WrapMessage() needs a redraw before the :echo to avoid that a
+"     later Vim redraw clears the wrap message. This happened when there's no
+"     statusline and thus :echo'ing into the ruler. 
+"  2. Removed line-continuations and ':set cpo=...'. Upper-cased <SID> and <CR>. 
+"  3. Added default highlighting for the special search type. 
+"
+" 2nd Jun 2009, Ingo Karkat
+"  1. Replaced highlighting via :syntax with matchadd() / matchdelete(). This
+"     requires Vim 7.2 / 7.1 with patches. This method is faster, there are no
+"     more clashes with syntax highlighting (:match always has preference), and
+"     the background highlighting does not disappear under 'cursorline'. 
+"  2. Factored :windo application out into s:MarkScope(). 
+"  3. Using winrestcmd() to fix effects of :windo: By entering a window, its
+"     height is potentially increased from 0 to 1. 
+"  4. Handling multiple tabs by calling s:UpdateScope() on the TabEnter event. 
+"     
 " 1st Jun 2009, Ingo Karkat
 "  1. Now using Vim List for g:mwWord and thus requiring Vim 7. g:mwCycle is now
 "     zero-based, but the syntax groups "MarkWordx" are still one-based. 
@@ -96,7 +110,7 @@
 "     command.
 "  8. The jumps to the next/prev occurrence now print 'search hit BOTTOM,
 "     continuing at TOP" and "Pattern not found:..." messages, like the * and
-"     n/N VIM search commands.
+"     n/N Vim search commands.
 "  9. Jumps now open folds if the occurrence is inside a closed fold, just like n/N
 "     do. 
 "
@@ -109,7 +123,7 @@
 " (*) added GetVisualSelectionEscaped for multi-lines visual selection and
 "     visual selection contains ^, $, etc.
 " (*) changed the name ThisMark to CurrentMark
-" (*) added SearchCurrentMark and re-used raw map (instead of VIM function) to
+" (*) added SearchCurrentMark and re-used raw map (instead of Vim function) to
 "     implement * and #
 "
 " 14th Sep 2005, Luc Hermitte: modifications done on v1.1.4
@@ -127,14 +141,10 @@
 "     -> e.g. :Mark Mark.\{-}\ze(
 
 " Anti reinclusion guards
-if (exists('g:loaded_mark') && !exists('g:force_reload_mark')) || (v:version < 700)
+if (exists('g:loaded_mark') && !exists('g:force_reload_mark')) || (v:version == 701 && ! exists('*matchadd')) || (v:version < 702)
 	finish
 endif
 let g:loaded_mark = 1
-
-" Support for |line-continuation|
-let s:save_cpo = &cpo
-set cpo&vim
 
 " default colors/groups
 " you may define your own colors in your vimrc file, in the form as below:
@@ -169,18 +179,12 @@ if !hasmapto('<Plug>MarkClear', 'n')
 	nmap <unique> <silent> <leader>n <Plug>MarkClear
 endif
 
-nnoremap <silent> <Plug>MarkSet   :call
-	\ <sid>MarkCurrentWord()<cr>
-vnoremap <silent> <Plug>MarkSet   <c-\><c-n>:call
-	\ <sid>DoMark(<sid>GetVisualSelectionEscaped("enV"))<cr>
-nnoremap <silent> <Plug>MarkRegex :call
-	\ <sid>MarkRegex()<cr>
-vnoremap <silent> <Plug>MarkRegex <c-\><c-n>:call
-	\ <sid>MarkRegex(<sid>GetVisualSelectionEscaped("N"))<cr>
-nnoremap <silent> <Plug>MarkClear :call
-	\ <sid>DoMark(<sid>CurrentMark())<cr>
-nnoremap <silent> <Plug>MarkAllClear :call
-	\ <sid>DoMark()<cr>
+nnoremap <silent> <Plug>MarkSet   :call <SID>MarkCurrentWord()<CR>
+vnoremap <silent> <Plug>MarkSet   <c-\><c-n>:call <SID>DoMark(<SID>GetVisualSelectionEscaped("enV"))<CR>
+nnoremap <silent> <Plug>MarkRegex :call <SID>MarkRegex()<CR>
+vnoremap <silent> <Plug>MarkRegex <c-\><c-n>:call <SID>MarkRegex(<SID>GetVisualSelectionEscaped("N"))<CR>
+nnoremap <silent> <Plug>MarkClear :call <SID>DoMark(<SID>CurrentMark())<CR>
+nnoremap <silent> <Plug>MarkAllClear :call <SID>DoMark()<CR>
 
 " Here is a sumerization of the following keys' behaviors:
 " 
@@ -199,16 +203,16 @@ nnoremap <silent> <Plug>MarkAllClear :call
 "  \/   jump to the next occurrence of    same as left
 "       ANY mark.
 "
-"   *   if \* is the most recently used,  do VIM's original *
+"   *   if \* is the most recently used,  do Vim's original *
 "       do a \*; otherwise (\/ is the
 "       most recently used), do a \/.
 
-nnoremap <silent> <Plug>MarkSearchCurrentNext :call <sid>SearchCurrentMark()<cr>
-nnoremap <silent> <Plug>MarkSearchCurrentPrev :call <sid>SearchCurrentMark("b")<cr>
-nnoremap <silent> <Plug>MarkSearchAnyNext     :call <sid>SearchAnyMark()<cr>
-nnoremap <silent> <Plug>MarkSearchAnyPrev     :call <sid>SearchAnyMark("b")<cr>
-nnoremap <silent> <Plug>MarkSearchNext        :if !<sid>SearchNext()<bar>execute "norm! *zv"<bar>endif<cr>
-nnoremap <silent> <Plug>MarkSearchPrev        :if !<sid>SearchNext("b")<bar>execute "norm! #zv"<bar>endif<cr>
+nnoremap <silent> <Plug>MarkSearchCurrentNext :call <SID>SearchCurrentMark()<CR>
+nnoremap <silent> <Plug>MarkSearchCurrentPrev :call <SID>SearchCurrentMark("b")<CR>
+nnoremap <silent> <Plug>MarkSearchAnyNext     :call <SID>SearchAnyMark()<CR>
+nnoremap <silent> <Plug>MarkSearchAnyPrev     :call <SID>SearchAnyMark("b")<CR>
+nnoremap <silent> <Plug>MarkSearchNext        :if !<SID>SearchNext()<bar>execute "norm! *zv"<bar>endif<CR>
+nnoremap <silent> <Plug>MarkSearchPrev        :if !<SID>SearchNext("b")<bar>execute "norm! #zv"<bar>endif<CR>
 " When typed, [*#nN] open the fold at the search result, but inside a mapping or
 " :normal this must be done explicitly via 'zv'. 
 
@@ -232,9 +236,14 @@ if !hasmapto('<Plug>MarkSearchPrev', 'n')
 	nmap <unique> <silent> # <Plug>MarkSearchPrev
 endif
 
-command! -nargs=? Mark call s:DoMark(<f-args>)
+command! -nargs=? Mark call <SID>DoMark(<f-args>)
 
-autocmd BufWinEnter * call s:UpdateMark()
+augroup Mark
+	autocmd!
+	autocmd VimEnter * if ! exists('w:mwMatch') | call <SID>UpdateMark() | endif
+	autocmd WinEnter * if ! exists('w:mwMatch') | call <SID>UpdateMark() | endif
+	autocmd TabEnter * call <SID>UpdateScope()
+augroup END
 
 " Script variables
 let s:current_mark_position = ''
@@ -333,36 +342,58 @@ function! s:InitMarkVariables()
 	endif
 endfunction
 
-function! s:ClearMatches( indices )
-	for l:index in a:indices
-		execute 'syntax clear MarkWord' . (l:index + 1)
-	endfor
+function! s:Cycle( ... )
+	let l:currentCycle = g:mwCycle
+	let l:newCycle = (a:0 ? a:1 : g:mwCycle) + 1
+	let g:mwCycle = (l:newCycle < g:mwCycleMax ? l:newCycle : 0)
+	return l:currentCycle
 endfunction
-function! s:MarkMatch( index, expr )
-	execute 'syntax clear MarkWord' . (a:index + 1)
+
+" Set / clear matches in the current window. 
+function! s:MarkMatch( indices, expr )
+	for l:index in a:indices
+		if w:mwMatch[l:index] > 0
+			silent! call matchdelete(w:mwMatch[l:index])
+			let w:mwMatch[l:index] = 0
+		endif
+	endfor
+
 	if ! empty(a:expr)
 		" Make the match according to the 'ignorecase' setting, like the star command. 
-		execute 'syntax case' (&ignorecase ? 'ignore' : 'match')
+		" (But honor an explicit case-sensitive regexp via the /\C/ atom.) 
+		let l:expr = ((&ignorecase && a:expr !~# '\\\@<!\\C') ? '\c' . a:expr : a:expr)
 
-		" quote a:expr with / etc. e.g. pattern => /pattern/
-		let quote = "/?~!@#$%^&*+-=,.:"
-		let q = 0
-		while q < strlen(quote)
-			if stridx(a:expr, quote[q]) < 0
-				let quoted_expr = quote[q] . a:expr . quote[q]
-				break
-			endif
-			let q += 1
-		endwhile
-		if q < strlen(quote)
-			execute 'syntax match MarkWord' . (a:index + 1) quoted_expr 'containedin=.*'
-		endif
+		let w:mwMatch[a:indices[0]] = matchadd('MarkWord' . (a:indices[0] + 1), l:expr, -10)
 	endif
 endfunction
+" Set / clear matches in all windows. 
+function! s:MarkScope( indices, expr )
+	let l:currentWinNr = winnr()
 
+	" By entering a window, its height is potentially increased from 0 to 1 (the
+	" minimum for the current window). To avoid any modification, save the window
+	" sizes and restore them after visiting all windows. 
+	let l:originalWindowLayout = winrestcmd() 
+
+	noautocmd windo call s:MarkMatch(a:indices, a:expr)
+	execute l:currentWinNr . 'wincmd w'
+	silent! execute l:originalWindowLayout
+endfunction
+" Update matches in all windows. 
+function! s:UpdateScope()
+	let l:currentWinNr = winnr()
+
+	" By entering a window, its height is potentially increased from 0 to 1 (the
+	" minimum for the current window). To avoid any modification, save the window
+	" sizes and restore them after visiting all windows. 
+	let l:originalWindowLayout = winrestcmd() 
+
+	noautocmd windo call s:UpdateMark()
+	execute l:currentWinNr . 'wincmd w'
+	silent! execute l:originalWindowLayout
+endfunction
 " mark or unmark a regular expression
 function! s:DoMark(...) " DoMark(regexp)
-	let lastwinnr = winnr()
 	let regexp = (a:0 ? a:1 : '')
 
 	" clear all marks if regexp is null
@@ -377,8 +408,7 @@ function! s:DoMark(...) " DoMark(regexp)
 			let i += 1
 		endwhile
 		let g:mwLastSearched = ""
-		noautocmd windo call s:ClearMatches(l:indices)
-		exe lastwinnr . "wincmd w"
+		call s:MarkScope(l:indices, '')
 		return
 	endif
 
@@ -390,8 +420,7 @@ function! s:DoMark(...) " DoMark(regexp)
 				let g:mwLastSearched = ''
 			endif
 			let g:mwWord[i] = ''
-			noautocmd windo call s:MarkMatch(i, '')
-			exe lastwinnr . "wincmd w"
+			call s:MarkScope([i], '')
 			return
 		endif
 		let i += 1
@@ -410,47 +439,33 @@ function! s:DoMark(...) " DoMark(regexp)
 	while i < g:mwCycleMax
 		if empty(g:mwWord[i])
 			let g:mwWord[i] = regexp
-			if (i + 1) < g:mwCycleMax
-				let g:mwCycle = i + 1
-			else
-				let g:mwCycle = 0
-			endif
-			noautocmd windo call s:MarkMatch(i, regexp)
-			exe lastwinnr . "wincmd w"
+			call s:Cycle(i)
+			call s:MarkScope([i], regexp)
 			return
 		endif
 		let i += 1
 	endwhile
 
 	" choose a mark group by cycle
-	let i = 0
-	while i < g:mwCycleMax
-		if g:mwCycle == i
-			if g:mwLastSearched == g:mwWord[i]
-				let g:mwLastSearched = ''
-			endif
-			let g:mwWord[i] = regexp
-			if (i + 1) < g:mwCycleMax
-				let g:mwCycle = i + 1
-			else
-				let g:mwCycle = 0
-			endif
-			noautocmd windo call s:MarkMatch(i, regexp)
-			exe lastwinnr . "wincmd w"
-			return
-		endif
-		let i += 1
-	endwhile
+	let i = s:Cycle()
+	if g:mwLastSearched == g:mwWord[i]
+		let g:mwLastSearched = ''
+	endif
+	let g:mwWord[i] = regexp
+	call s:MarkScope([i], regexp)
 endfunction
-
-" update mark colors in a new buffer
+" initialize mark colors in a (new) window
 function! s:UpdateMark()
+	if ! exists('w:mwMatch')
+		let w:mwMatch = repeat([0], g:mwCycleMax)
+	endif
+
 	let i = 0
 	while i < g:mwCycleMax
 		if empty(g:mwWord[i])
-			call s:ClearMatches([i])
+			call s:MarkMatch([i], '')
 		else
-			call s:MarkMatch(i, g:mwWord[i])
+			call s:MarkMatch([i], g:mwWord[i])
 		endif
 		let i += 1
 	endwhile
@@ -633,8 +648,5 @@ endfunction
 
 " Define global variables once
 call s:InitMarkVariables()
-
-" Restore previous 'cpo' value
-let &cpo = s:save_cpo
 
 " vim: ts=2 sw=2
