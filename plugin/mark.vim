@@ -13,8 +13,17 @@
 "  - Requires Vim 7.1 with "matchadd()", or Vim 7.2 or higher. 
 "  - mark.vim autoload script. 
 " 
-" Version:     2.2.0
+" Version:     2.3.0
 " Changes:
+" 04-Jul-2009, Ingo Karkat
+" - A [count] before any mapping either caused "No range allowed" error or just
+"   repeated the :call [count] times, resulting in the current search pattern
+"   echoed [count] times and a hit-enter prompt. Now suppressing [count] via
+"   <C-u> and handling it inside the implementation. 
+" - Now passing isBackward (0/1) instead of optional 'b' flag into functions. 
+"   Also passing empty regexp to mark#MarkRegex() to avoid any optional
+"   arguments. 
+"
 " 02-Jul-2009, Ingo Karkat
 " - Split off functions into autoload script. 
 " - Removed g:force_reload_mark. 
@@ -135,19 +144,19 @@ highlight def link SearchSpecialSearchType MoreMsg
 
 
 "- mappings -------------------------------------------------------------------
-nnoremap <silent> <Plug>MarkSet   :call mark#MarkCurrentWord()<CR>
-vnoremap <silent> <Plug>MarkSet   <c-\><c-n>:call mark#DoMark(mark#GetVisualSelectionEscaped("enV"))<CR>
-nnoremap <silent> <Plug>MarkRegex :call mark#MarkRegex()<CR>
-vnoremap <silent> <Plug>MarkRegex <c-\><c-n>:call mark#MarkRegex(mark#GetVisualSelectionEscaped("N"))<CR>
-nnoremap <silent> <Plug>MarkClear :call mark#DoMark(mark#CurrentMark())<CR>
-nnoremap <silent> <Plug>MarkAllClear :call mark#DoMark()<CR>
+nnoremap <silent> <Plug>MarkSet   :<C-u>call mark#MarkCurrentWord()<CR>
+vnoremap <silent> <Plug>MarkSet   <C-\><C-n>:call mark#DoMark(mark#GetVisualSelectionEscaped("enV"))<CR>
+nnoremap <silent> <Plug>MarkRegex :<C-u>call mark#MarkRegex('')<CR>
+vnoremap <silent> <Plug>MarkRegex <C-\><C-n>:call mark#MarkRegex(mark#GetVisualSelectionEscaped("N"))<CR>
+nnoremap <silent> <Plug>MarkClear :<C-u>call mark#DoMark(mark#CurrentMark()[0])<CR>
+nnoremap <silent> <Plug>MarkAllClear :<C-u>call mark#DoMark()<CR>
 
-nnoremap <silent> <Plug>MarkSearchCurrentNext :call mark#SearchCurrentMark()<CR>
-nnoremap <silent> <Plug>MarkSearchCurrentPrev :call mark#SearchCurrentMark("b")<CR>
-nnoremap <silent> <Plug>MarkSearchAnyNext     :call mark#SearchAnyMark()<CR>
-nnoremap <silent> <Plug>MarkSearchAnyPrev     :call mark#SearchAnyMark("b")<CR>
-nnoremap <silent> <Plug>MarkSearchNext        :if !mark#SearchNext()<bar>execute "norm! *zv"<bar>endif<CR>
-nnoremap <silent> <Plug>MarkSearchPrev        :if !mark#SearchNext("b")<bar>execute "norm! #zv"<bar>endif<CR>
+nnoremap <silent> <Plug>MarkSearchCurrentNext :<C-u>call mark#SearchCurrentMark(0)<CR>
+nnoremap <silent> <Plug>MarkSearchCurrentPrev :<C-u>call mark#SearchCurrentMark(1)<CR>
+nnoremap <silent> <Plug>MarkSearchAnyNext     :<C-u>call mark#SearchAnyMark(0)<CR>
+nnoremap <silent> <Plug>MarkSearchAnyPrev     :<C-u>call mark#SearchAnyMark(1)<CR>
+nnoremap <silent> <Plug>MarkSearchNext        :<C-u>if !mark#SearchNext(0)<Bar>execute 'normal! *zv'<Bar>endif<CR>
+nnoremap <silent> <Plug>MarkSearchPrev        :<C-u>if !mark#SearchNext(1)<Bar>execute 'normal! #zv'<Bar>endif<CR>
 " When typed, [*#nN] open the fold at the search result, but inside a mapping or
 " :normal this must be done explicitly via 'zv'. 
 
