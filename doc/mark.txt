@@ -40,6 +40,8 @@ RELATED WORKS								     *
 - http://vim.wikia.com/wiki/Highlight_multiple_words offers control over the
   color used by mapping the 1-9 keys on the numeric keypad, persistence, and
   highlights only a single window. 
+- highlight.vim (vimscript #1599) highlights lines or patterns of interest in
+  different colors, using mappings that start with CTRL-H and work on cword. 
 
 ==============================================================================
 USAGE								  *mark-usage*
@@ -122,10 +124,10 @@ form (where N = 1..): >
 <
 The search type highlighting (in the search message) can be changed via: >
     highlight link SearchSpecialSearchType MoreMsg
-<
+<								 *g:mwHistAdd*
 By default, any marked words are also added to the search (/) and input (@)
 history; if you don't want that, remove the corresponding symbols from: >
-    let g:mwHistAdd = "/@"
+    let g:mwHistAdd = '/@'
 <
 You can use different mappings by mapping to the <Plug>Mark... mappings before
 this plugin is sourced. To remove the default overriding of * and #, use: >
@@ -163,6 +165,19 @@ http://vim.wikia.com/wiki/Highlight_multiple_words:
 
 ==============================================================================
 HISTORY								*mark-history*
+
+2.4.3	16-Apr-2011
+- Avoid losing the mark highlightings on :syn on or :colorscheme commands.
+  Thanks to Zhou YiChao for alerting me to this issue and suggesting a fix. 
+- Made the script more robust when somehow no highlightings have been defined
+  or when the window-local reckoning of match IDs got lost. I had very
+  occasionally encountered such script errors in the past. 
+- Made global housekeeping variables script-local, only g:mwHistAdd is used
+  for configuration. 
+
+2.4.2	14-Jan-2011 (unreleased)
+- FIX: Capturing the visual selection could still clobber the blockwise yank
+  mode of the unnamed register. 
 
 2.4.1	13-Jan-2011
 - FIX: Using a named register for capturing the visual selection on

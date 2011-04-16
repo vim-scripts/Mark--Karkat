@@ -1,7 +1,7 @@
 This is a mirror of http://www.vim.org/scripts/script.php?script_id=2666
 
 DESCRIPTION
-This script adds mappings and a :Mark command to highlight several words in
+This plugin adds mappings and a :Mark command to highlight several words in
 different colors simultaneously, similar to the built-in 'hlsearch'
 highlighting of search results and the * star command. For example, when you
 are browsing a big program file, you could highlight multiple identifiers in
@@ -9,7 +9,7 @@ parallel. This will make it easier to trace the source code.
 
 This is a continuation of vimscript #1238 by Yuheng Xie, who apparently
 doesn't maintain his original version anymore and cannot be reached via the
-email address in his profile. This script offers the following advantages over
+email address in his profile. This plugin offers the following advantages over
 the original:
 - Much faster, all colored words can now be highlighted, no more clashes with
   syntax highlighting (due to use of matchadd()). 
@@ -25,6 +25,8 @@ RELATED WORKS
 - http://vim.wikia.com/wiki/Highlight_multiple_words offers control over the
   color used by mapping the 1-9 keys on the numeric keypad, persistence, and
   highlights only a single window. 
+- highlight.vim (vimscript #1599) highlights lines or patterns of interest in
+  different colors, using mappings that start with CTRL-H and work on cword. 
 
 USAGE
 Highlighting:
