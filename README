@@ -3,7 +3,7 @@ This is a mirror of http://www.vim.org/scripts/script.php?script_id=2666
 DESCRIPTION
 This plugin adds mappings and a :Mark command to highlight several words in
 different colors simultaneously, similar to the built-in 'hlsearch'
-highlighting of search results and the * star command. For example, when you
+highlighting of search results and the * command. For example, when you
 are browsing a big program file, you could highlight multiple identifiers in
 parallel. This will make it easier to trace the source code.
 
@@ -30,15 +30,19 @@ RELATED WORKS
 
 USAGE
 Highlighting:
-<Leader>m		Mark or unmark the word under the cursor, similar to
-			the |star| command. 
-			Likewise, 'ignorecase' is used, 'smartcase' is not.
+<Leader>m		Mark the word under the cursor, similar to the star
+			command. The next free highlight group is used. 
+			If already on a mark: Clear the mark, like
+			<Leader>n. 
 {Visual}<Leader>m	Mark or unmark the visual selection. 
-<Leader>r		Manually input a regular expression to highlight. 
-{Visual}<Leader>r	(Based on the visual selection.) 
-<Leader>n		Clear the mark under the cursor / all marks. 
 
-:Mark {regexp}		Mark or unmark {regexp}. 
+<Leader>r		Manually input a regular expression to mark. 
+{Visual}<Leader>r	(Based on the visual selection.) 
+
+<Leader>n		Clear the mark under the cursor.
+			If not on a mark: Clear all marks. 
+
+:Mark {pattern}		Mark or unmark {pattern}. 
 :Mark			Clear all marks. 
 
 Searching:
