@@ -28,8 +28,7 @@ RELATED WORKS
 - highlight.vim (vimscript #1599) highlights lines or patterns of interest in
   different colors, using mappings that start with CTRL-H and work on cword. 
 
-USAGE
-Highlighting:
+HIGHLIGHTING
 <Leader>m		Mark the word under the cursor, similar to the star
 			command. The next free highlight group is used. 
 			If already on a mark: Clear the mark, like
@@ -37,16 +36,21 @@ Highlighting:
 {Visual}<Leader>m	Mark or unmark the visual selection. 
 
 <Leader>r		Manually input a regular expression to mark. 
-{Visual}<Leader>r	(Based on the visual selection.) 
+{Visual}<Leader>r	Ditto, based on the visual selection. 
 
 <Leader>n		Clear the mark under the cursor.
-			If not on a mark: Clear all marks. 
+			If not on a mark: Disable all marks, similar to
+			:nohlsearch. 
 
 :Mark {pattern}		Mark or unmark {pattern}. 
-:Mark			Clear all marks. 
+:Mark			Disable all marks, similar to :nohlsearch. Marks
+			will automatically re-enable when a mark is added or
+			removed, or a search for marks is performed. 
+:MarkClear		Clear all marks. In contrast to disabling marks, the
+			actual mark information is cleared, the next mark will
+			use the first highlight group. This cannot be undone. 
 
-Searching:
-
+SEARCHING
 [count]*         [count]#
 [count]<Leader>* [count]<Leader>#
 [count]<Leader>/ [count]<Leader>?
@@ -69,3 +73,13 @@ Searching:
             used, do a <Leader>*; otherwise
             (<Leader>/ is the most recently
             used), do a <Leader>/. 
+
+MARK PERSISTENCE
+The marks can be kept and restored across Vim sessions, using the viminfo
+file. For this to work, the "!" flag must be part of the 'viminfo' setting: 
+    set viminfo+=!  " Save and restore global variables. 
+:MarkLoad		Restore the marks from the previous Vim session. All
+			current marks are discarded. 
+:MarkSave		Save the currently defined marks (or clear the
+			persisted marks if no marks are currently defined) for
+			use in a future Vim session. 
