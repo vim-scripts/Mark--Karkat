@@ -165,6 +165,9 @@ DEPENDENCIES						   *mark-dependencies*
 ==============================================================================
 CONFIGURATION						  *mark-configuration*
 
+For a permanent configuration, put the following commands into your |vimrc|. 
+
+						       *mark-highlight-colors*
 You may define your own colors or more than the default 6 highlightings in
 your vimrc file (or anywhere before this plugin is sourced), in the following
 form (where N = 1..): >
@@ -200,6 +203,24 @@ To remove the default overriding of * and #, use: >
     nmap <Plug>IgnoreMarkSearchNext <Plug>MarkSearchNext
     nmap <Plug>IgnoreMarkSearchPrev <Plug>MarkSearchPrev
 <
+						 *mark-whitespace-indifferent*
+Some people like to create a mark based on the visual selection, like
+|v_<Leader>m|, but have whitespace in the selection match any whitespace when
+searching (searching for "hello world" will also find "hello<Tab>world" as
+well as "hello" at the end of a line, with "world" at the start of the next
+line). The Vim Tips Wiki describes such a setup for the built-in search at 
+    http://vim.wikia.com/wiki/Search_for_visually_selected_text
+You can achieve the same with the Mark plugin through the following scriptlet: >
+    function! s:GetVisualSelectionAsLiteralWhitespaceIndifferentPattern()
+    	return substitute(escape(mark#GetVisualSelection(), '\' . '^$.*[~'), '\_s\+', '\\_s\\+', 'g')
+    endfunction
+    vnoremap <silent> <Plug>MarkWhitespaceIndifferent <C-\><C-n>:call mark#DoMark(<SID>GetVisualSelectionAsLiteralWhitespaceIndifferentPattern())<CR>
+Using this, you can assign a new visual mode mapping <Leader>* >
+    vmap <Leader>* <Plug>MarkWhitespaceIndifferent
+or override the default |v_<Leader>m| mapping, in case you always want this
+behavior: >
+    vmap <Leader>m <Plug>MarkWhitespaceIndifferent
+<
 ==============================================================================
 LIMITATIONS						    *mark-limitations*
 
@@ -223,6 +244,13 @@ http://vim.wikia.com/wiki/Highlight_multiple_words:
 
 ==============================================================================
 HISTORY								*mark-history*
+
+2.5.1	17-May-2011
+- FIX: == comparison in s:DoMark() leads to wrong regexp (\A vs. \a) being
+  cleared when 'ignorecase' is set. Use case-sensitive comparison ==# instead. 
+- Refine :MarkLoad messages 
+- Add whitespace-indifferent visual mark configuration example. Thanks to Greg
+  Klein for the suggestion. 
 
 2.5.0	07-May-2011
 - ENH: Add explicit mark persistence via :MarkLoad and :MarkSave commands and

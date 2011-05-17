@@ -10,8 +10,19 @@
 " Dependencies:
 "  - SearchSpecial.vim autoload script (optional, for improved search messages). 
 "
-" Version:     2.5.0
+" Version:     2.5.1
 " Changes:
+"
+" 17-May-2011, Ingo Karkat
+" - Make s:GetVisualSelection() public to allow use in suggested
+"   <Plug>MarkSpaceIndifferent vmap. 
+" - FIX: == comparison in s:DoMark() leads to wrong regexp (\A vs. \a) being
+"   cleared when 'ignorecase' is set. Use case-sensitive comparison ==# instead. 
+"
+" 10-May-2011, Ingo Karkat
+" - Refine :MarkLoad messages: Differentiate between nonexistent and empty
+"   g:MARK_MARKS; add note when marks are disabled. 
+"
 " 06-May-2011, Ingo Karkat
 " - Also print status message on :MarkClear to be consistent with :MarkToggle. 
 "
@@ -155,7 +166,7 @@ function! mark#MarkCurrentWord()
 	endif
 endfunction
 
-function! s:GetVisualSelection()
+function! mark#GetVisualSelection()
 	let save_clipboard = &clipboard
 	set clipboard= " Avoid clobbering the selection and clipboard registers. 
 	let save_reg = getreg('"')
@@ -167,10 +178,10 @@ function! s:GetVisualSelection()
 	return res
 endfunction
 function! mark#GetVisualSelectionAsLiteralPattern()
-	return s:EscapeText(s:GetVisualSelection())
+	return s:EscapeText(mark#GetVisualSelection())
 endfunction
 function! mark#GetVisualSelectionAsRegexp()
-	return substitute(s:GetVisualSelection(), '\n', '', 'g')
+	return substitute(mark#GetVisualSelection(), '\n', '', 'g')
 endfunction
 
 " Manually input a regular expression. 
@@ -348,8 +359,8 @@ function! mark#DoMark(...) " DoMark(regexp)
 	" clear the mark if it has been marked
 	let i = 0
 	while i < s:markNum
-		if regexp == s:pattern[i]
-			if s:lastSearch == s:pattern[i]
+		if regexp ==# s:pattern[i]
+			if s:lastSearch ==# s:pattern[i]
 				let s:lastSearch = ''
 			endif
 			call s:SetPattern(i, '')
@@ -394,7 +405,7 @@ function! mark#DoMark(...) " DoMark(regexp)
 
 	" choose a mark group by cycle
 	let i = s:Cycle()
-	if s:lastSearch == s:pattern[i]
+	if s:lastSearch ==# s:pattern[i]
 		let s:lastSearch = ''
 	endif
 	call s:SetPattern(i, regexp)
@@ -675,9 +686,9 @@ function! mark#LoadCommand( isShowMessages )
 			execute 'let l:loadedMarkNum = mark#Load(' . g:MARK_MARKS . ', ' . (exists('g:MARK_ENABLED') ? g:MARK_ENABLED : 1) . ')'
 			if a:isShowMessages
 				if l:loadedMarkNum == 0
-					echomsg 'No persistent marks found'
+					echomsg 'No persistent marks defined'
 				else
-					echomsg printf('Loaded %d mark%s', l:loadedMarkNum, (l:loadedMarkNum == 1 ? '' : 's'))
+					echomsg printf('Loaded %d mark%s', l:loadedMarkNum, (l:loadedMarkNum == 1 ? '' : 's')) . (s:enabled ? '' : '; marks currently disabled')
 				endif
 			endif
 		catch /^Vim\%((\a\+)\)\=:E/
