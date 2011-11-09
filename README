@@ -27,6 +27,9 @@ RELATED WORKS
   highlights only a single window. 
 - highlight.vim (vimscript #1599) highlights lines or patterns of interest in
   different colors, using mappings that start with CTRL-H and work on cword. 
+- quickhl.vim (vimscript #3692) can also list the matches with colors and in
+  addition offers on-the-fly highlighting of the current word (like many IDEs
+  do). 
 
 HIGHLIGHTING
 <Leader>m		Mark the word under the cursor, similar to the star
